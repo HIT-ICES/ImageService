@@ -4,7 +4,9 @@ go 1.20
 
 require (
 	github.com/containerd/containerd v1.7.7
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1
+	google.golang.org/grpc v1.53.0
 )
 
 require (
@@ -67,7 +69,6 @@ require (
 	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
-	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
