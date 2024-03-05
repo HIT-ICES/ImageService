@@ -22,10 +22,16 @@ func deleteImage(context *gin.Context) {
 	context.String(200, response)
 }
 
+func imageSize(context *gin.Context) {
+	response := imageOperation.GetImageSize()
+	context.JSON(200, response)
+}
+
 func RouterHandler(router *gin.Engine) {
 	router.GET("/listImages", listImages)
 	router.GET("/pullImage", pullImage)
 	router.GET("/deleteImage", deleteImage)
+	router.GET("/imageSize", imageSize)
 
 	router.Run(":8080")
 }

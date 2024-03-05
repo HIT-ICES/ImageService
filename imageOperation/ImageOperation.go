@@ -5,6 +5,7 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
+	"github.com/containerd/containerd/platforms"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
@@ -48,7 +49,17 @@ func ListImages() []modifiedImage {
 				}
 			}
 		}
-		size := image.Target.Size
+		//contentStore := client.ContentStore()
+		//if contentStore == nil {
+		//	log.Fatal("ContentStore is nil")
+		//}
+		//size := image.Target.Size
+		size, err := image.Size(ctx, client.ContentStore(), platforms.All)
+		if err != nil {
+			log.Println("Error while getting image size:", err)
+			continue
+		}
+
 		modifyingImage := modifiedImage{name, version, size}
 		modifiedImageList = append(modifiedImageList, modifyingImage)
 	}
@@ -58,6 +69,28 @@ func ListImages() []modifiedImage {
 	}
 
 	return modifiedImageList
+}
+
+func GetImageSize() int {
+	client, err := containerd.New("/run/containerd/containerd.sock")
+	if err != nil {
+		panic(err)
+	}
+	defer client.Close()
+
+	ctx := namespaces.WithNamespace(context.Background(), "k8s.io")
+
+	image, err := client.ImageService().Get(ctx, "192.168.1.104:5000/cloud-collaboration-platform/real-route-control-service:0.1")
+	if err != nil {
+		panic(err)
+	}
+
+	size, err := image.Size(ctx, client.ContentStore(), platforms.All)
+	if err != nil {
+		panic(err)
+	}
+
+	return int(size)
 }
 
 func PullImage(imageName string) string {
@@ -72,6 +105,16 @@ func PullImage(imageName string) string {
 	defer client.Close()
 
 	ctx := namespaces.WithNamespace(context.Background(), "k8s.io")
+
+	//image, err := client.ImageService().Get(ctx, imageName)
+	//if err != nil {
+	//	return err.Error()
+	//}
+	//
+	//createImage, err := client.ImageService().Create(ctx, image)
+	//if err != nil {
+	//	return err.Error()
+	//}
 
 	image, err := client.Pull(ctx, imageName, containerd.WithPullUnpack)
 	if err != nil {
