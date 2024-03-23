@@ -12,10 +12,19 @@ import (
 	"strings"
 )
 
+type DeleteImages struct {
+	Image string `json:"image"`
+}
+
 type modifiedImage struct {
 	ImageName    string `json:"imageName"`
 	ImageVersion string `json:"imageVersion"`
 	ImageSize    int64  `json:"imageSize"`
+}
+
+type deleteImageResponse struct {
+	Image   string `json:"image"`
+	Success string `json:"success"`
 }
 
 func ListImages() []modifiedImage {
@@ -71,28 +80,6 @@ func ListImages() []modifiedImage {
 	return modifiedImageList
 }
 
-func GetImageSize() int {
-	client, err := containerd.New("/run/containerd/containerd.sock")
-	if err != nil {
-		panic(err)
-	}
-	defer client.Close()
-
-	ctx := namespaces.WithNamespace(context.Background(), "k8s.io")
-
-	image, err := client.ImageService().Get(ctx, "192.168.1.104:5000/cloud-collaboration-platform/real-route-control-service:0.1")
-	if err != nil {
-		panic(err)
-	}
-
-	size, err := image.Size(ctx, client.ContentStore(), platforms.All)
-	if err != nil {
-		panic(err)
-	}
-
-	return int(size)
-}
-
 func PullImage(imageName string) string {
 	dialOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -124,22 +111,28 @@ func PullImage(imageName string) string {
 	return "Pull " + image.Name() + " successfully"
 }
 
-func DeleteImage(imageName string) string {
+func DeleteImage(deleteImages *[]DeleteImages) *[]deleteImageResponse {
 	client, err := containerd.New("/run/containerd/containerd.sock")
-	if err != nil {
-		return err.Error()
-	}
 	defer client.Close()
 
 	ctx := namespaces.WithNamespace(context.Background(), "k8s.io")
 
-	err = client.ImageService().Delete(ctx, imageName, func(ctx context.Context, options *images.DeleteOptions) error {
-		options.Synchronous = true
-		return nil
-	})
-	if err != nil {
-		return err.Error()
+	var responses []deleteImageResponse
+
+	for _, image := range *deleteImages {
+		err = client.ImageService().Delete(ctx, image.Image, images.SynchronousDelete())
+		if err != nil {
+			responses = append(responses, deleteImageResponse{
+				Image:   image.Image,
+				Success: err.Error(),
+			})
+		} else {
+			responses = append(responses, deleteImageResponse{
+				Image:   image.Image,
+				Success: "delete successfully",
+			})
+		}
 	}
 
-	return "Delete successfully"
+	return &responses
 }
