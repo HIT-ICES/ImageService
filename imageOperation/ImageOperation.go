@@ -6,14 +6,18 @@ import (
 	"github.com/containerd/containerd/images"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/platforms"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/containerd/containerd/remotes/docker"
 	"log"
+	"net/http"
 	"strings"
 )
 
-type DeleteImages struct {
-	Image string `json:"image"`
+type DeleteImagesJSON struct {
+	Image []string `json:"image"`
+}
+
+type PullImagesJSON struct {
+	Image []string `json:"image"`
 }
 
 type modifiedImage struct {
@@ -23,6 +27,11 @@ type modifiedImage struct {
 }
 
 type deleteImageResponse struct {
+	Image   string `json:"image"`
+	Success string `json:"success"`
+}
+
+type pullImageResponse struct {
 	Image   string `json:"image"`
 	Success string `json:"success"`
 }
@@ -58,11 +67,7 @@ func ListImages() []modifiedImage {
 				}
 			}
 		}
-		//contentStore := client.ContentStore()
-		//if contentStore == nil {
-		//	log.Fatal("ContentStore is nil")
-		//}
-		//size := image.Target.Size
+
 		size, err := image.Size(ctx, client.ContentStore(), platforms.All)
 		if err != nil {
 			log.Println("Error while getting image size:", err)
@@ -80,38 +85,60 @@ func ListImages() []modifiedImage {
 	return modifiedImageList
 }
 
-func PullImage(imageName string) string {
-	dialOpts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+func pullImage(imageName string) error {
+	authorizer := docker.NewDockerAuthorizer()
+	if strings.HasPrefix(imageName, "192.168.1.199:5000") {
+		authorizer = docker.NewDockerAuthorizer(
+			docker.WithAuthClient(http.DefaultClient),
+			docker.WithAuthCreds(func(host string) (string, string, error) {
+				return "admin", "bfgeY8qckIhH2aeh", nil
+			}),
+		)
 	}
-	client, err := containerd.New("/run/containerd/containerd.sock",
-		containerd.WithDialOpts(dialOpts))
+
+	resolver := docker.NewResolver(docker.ResolverOptions{
+		Hosts: docker.ConfigureDefaultRegistries(
+			docker.WithPlainHTTP(docker.MatchAllHosts),
+			docker.WithAuthorizer(authorizer),
+		),
+	})
+
+	client, err := containerd.New("/run/containerd/containerd.sock")
 	if err != nil {
-		return err.Error()
+		return err
 	}
 	defer client.Close()
 
 	ctx := namespaces.WithNamespace(context.Background(), "k8s.io")
 
-	//image, err := client.ImageService().Get(ctx, imageName)
-	//if err != nil {
-	//	return err.Error()
-	//}
-	//
-	//createImage, err := client.ImageService().Create(ctx, image)
-	//if err != nil {
-	//	return err.Error()
-	//}
-
-	image, err := client.Pull(ctx, imageName, containerd.WithPullUnpack)
+	_, err = client.Pull(ctx, imageName, containerd.WithPullUnpack, containerd.WithResolver(resolver))
 	if err != nil {
-		return err.Error()
+		return err
 	}
 
-	return "Pull " + image.Name() + " successfully"
+	return nil
 }
 
-func DeleteImage(deleteImages *[]DeleteImages) *[]deleteImageResponse {
+func PullImages(pullImages *PullImagesJSON) *[]pullImageResponse {
+	var responses []pullImageResponse
+	for _, image := range pullImages.Image {
+		err := pullImage(image)
+		if err != nil {
+			responses = append(responses, pullImageResponse{
+				Image:   image,
+				Success: err.Error(),
+			})
+		} else {
+			responses = append(responses, pullImageResponse{
+				Image:   image,
+				Success: "pull successfully",
+			})
+		}
+	}
+	return &responses
+}
+
+func DeleteImages(deleteImages *DeleteImagesJSON) *[]deleteImageResponse {
 	client, err := containerd.New("/run/containerd/containerd.sock")
 	defer client.Close()
 
@@ -119,16 +146,16 @@ func DeleteImage(deleteImages *[]DeleteImages) *[]deleteImageResponse {
 
 	var responses []deleteImageResponse
 
-	for _, image := range *deleteImages {
-		err = client.ImageService().Delete(ctx, image.Image, images.SynchronousDelete())
+	for _, image := range deleteImages.Image {
+		err = client.ImageService().Delete(ctx, image, images.SynchronousDelete())
 		if err != nil {
 			responses = append(responses, deleteImageResponse{
-				Image:   image.Image,
+				Image:   image,
 				Success: err.Error(),
 			})
 		} else {
 			responses = append(responses, deleteImageResponse{
-				Image:   image.Image,
+				Image:   image,
 				Success: "delete successfully",
 			})
 		}

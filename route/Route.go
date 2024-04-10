@@ -6,31 +6,38 @@ import (
 	"net/http"
 )
 
-func pullImage(context *gin.Context) {
-	imageName := context.Query("imageName")
-	response := imageOperation.PullImage(imageName)
-	context.String(200, response)
-}
-
-func listImages(context *gin.Context) {
-	imageArray := imageOperation.ListImages()
-	context.JSON(200, imageArray)
-}
-
-func deleteImage(context *gin.Context) {
-	var images []imageOperation.DeleteImages
+func pullImages(context *gin.Context) {
+	var images imageOperation.PullImagesJSON
 	if err := context.BindJSON(&images); err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	response := imageOperation.DeleteImage(&images)
+	response := imageOperation.PullImages(&images)
+	context.JSON(http.StatusOK, response)
+}
+
+func listImages(context *gin.Context) {
+	imageArray := imageOperation.ListImages()
+	context.JSON(http.StatusOK, imageArray)
+}
+
+func deleteImages(context *gin.Context) {
+	var images imageOperation.DeleteImagesJSON
+	if err := context.BindJSON(&images); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	response := imageOperation.DeleteImages(&images)
 	context.JSON(http.StatusOK, *response)
 }
 
 func RouterHandler(router *gin.Engine) {
 	router.GET("/listImages", listImages)
-	router.GET("/pullImage", pullImage)
-	router.POST("/deleteImage", deleteImage)
+	router.POST("/pullImages", pullImages)
+	router.POST("/deleteImages", deleteImages)
 
-	router.Run(":8080")
+	err := router.Run(":8080")
+	if err != nil {
+		return
+	}
 }
