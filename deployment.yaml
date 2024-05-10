@@ -16,7 +16,7 @@ spec:
         app: image-service-controller
     spec:
       containers:
-      - image: docker.io/microyui/imageservicecontroller:1.6
+      - image: docker.io/microyui/imageservicecontroller:1.8
         name: image-service-controller
         ports:
         - containerPort: 8080
