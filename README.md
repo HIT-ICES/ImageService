@@ -1,28 +1,62 @@
 # README
 
 ## Overview
-app.py是一个Flask应用程序，它与Kubernetes集群交互以管理不同节点上的映像。它提供了几个HTTP端点来列出、删除和提取特定节点上的图像。
-它还提供端点以获取节点列表，并检查和创建部署和服务。
-## API
+The app.py is a Flask application that interacts with a Kubernetes cluster to manage images on different nodes. 
+It provides several HTTP endpoints to list, delete, and pull images on specific nodes. 
+It also provides endpoints to get a list of nodes and to check and create deployments and services.
+
+## Installation and Running
+1. Clone the repository:
+```shell
+git clone https://github.com/your_username/your_microservice.git
+```
+2. Navigate to the project directory:
+```shell
+cd imageservice
+```
+3. Build the project using Golang
+```shell
+go build
+```
+4. Build the Docker image:
+```shell
+docker build -t <you_image_url> .
+```
+5. Deploying to Kubernetes:
+   Make sure you have a Kubernetes cluster set up
+```shell
+kubectl apply -f deployment.yaml
+```
+
+## API Endpoints
 
 ### GET /update/monitor
-检查并为Kubernetes集群中的每个节点创建部署和服务。它不需要任何输入参数，也不返回任何数据。
+This endpoint checks and creates deployments and services for each node in the Kubernetes cluster. 
+It does not require any input parameters and returns a list of nodes for which deployments and services were created.\
+e.g.
+```shell
+["ices04-x11dai-n", "icespve01-standard-pc-i440fx-piix-1996"]
+```
 ### GET /get/nodes
-返回Kubernetes集群中所有节点的列表。它不需要任何输入参数。响应是一个节点名称的JSON数组。\
-形如:
+This endpoint returns a list of all nodes in the Kubernetes cluster. It does not require any input parameters. 
+The response is a JSON array of node names.  \
+e.g.
 ```shell
 ["ices04-x11dai-n", "icespve01-standard-pc-i440fx-piix-1996", "icespve02-standard-pc-i440fx-piix-1996",
 "icespve03-standard-pc-i440fx-piix-1996", "icespve04--standard-pc-i440fx-piix-1996"]
 ```
 ### POST /list
-返回特定节点上所有镜像的列表。它需要一个JSON对象，该对象在请求正文中具有node_name字段。\
-请求:\
+This endpoint returns a list of all images on a specific node. 
+It requires a JSON object with a node_name field in the request body. 
+The response is a JSON array of image details including image name, version, and size.  \
+e.g.\
+request:
 ```shell
 {
     "node_name": "icespve01-standard-pc-i440fx-piix-1996"
 }
 ```
-返回:
+response:
 ```shell
 [
     {
@@ -38,15 +72,18 @@ app.py是一个Flask应用程序，它与Kubernetes集群交互以管理不同�
 ]
 ```
 ### POST /delete
-删除特定节点上的特定图像。它需要一个JSON对象，该对象在请求体中具有node_name字段和image字段。\
-请求:\
+This endpoint deletes specific images on a specific node. 
+It requires a JSON object with a node_name field and an image field in the request body. 
+The response is a JSON object with the result of the deletion operation.\
+e.g.\
+request:
 ```shell
 {
   "node_name": "icespve01-standard-pc-i440fx-piix-1996",
   "image": "192.168.1.104:5000/cloud-collaboration-platform/depd-analysis-service:0.1.4"
 }
 ```
-响应是一个JSON对象，带有删除操作的结果。\
+response:
 ```shell
 {
   "image": "192.168.1.104:5000/cloud-collaboration-platform/depd-analysis-service:0.1.4",
@@ -54,23 +91,21 @@ app.py是一个Flask应用程序，它与Kubernetes集群交互以管理不同�
 }
 ```
 ### POST /pull
-在特定节点上提取特定图像。它需要一个JSON对象，该对象在请求体中具有node_name字段和image字段。\
-请求:\
+This endpoint pulls specific images on a specific node. 
+It requires a JSON object with a node_name field and an image field in the request body. 
+The response is a JSON object with the result of the pull operation.\
+e.g.\
+request:
 ```shell
 {
   "node_name": "icespve01-standard-pc-i440fx-piix-1996",
   "image": "192.168.1.104:5000/cloud-collaboration-platform/depd-analysis-service:0.1.4"
 }
 ```
-响应是一个JSON对象，带有pull操作的结果。\
+response:
 ```shell
 {
   "image": "192.168.1.104:5000/cloud-collaboration-platform/depd-analysis-service:0.1.4",
   "success": "pull successfully"
 }
-```
-## 部署
-运行deployment即可运行
-```shell
-kubectl apply -f deployment.yaml
 ```

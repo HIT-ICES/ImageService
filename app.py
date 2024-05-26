@@ -76,13 +76,13 @@ def create_service(api_instance, node_name):
     api_instance.create_namespaced_service(namespace='default', body=service)
 
 
-@app.route('update/monitor', methods=['GET'])
+@app.route('/update/monitor', methods=['GET'])
 def check_and_create_deployment_and_service():
-    print("check and create deployment and service")
     core_v1 = client.CoreV1Api()
     app_v1 = client.AppsV1Api()
     ret = core_v1.list_namespaced_service(namespace='default')
     service_name_list = []
+    update_node_list = []
     for i in ret.items:
         service_name_list.append(i.metadata.name)
     ret = core_v1.list_node()
@@ -92,7 +92,8 @@ def check_and_create_deployment_and_service():
         if image_service_name not in service_name_list:
             create_deployment(app_v1, node_name)
             create_service(core_v1, node_name)
-            print(f'create deployment and service on {node_name}')
+            update_node_list.append(node_name)
+    return json.dumps(update_node_list)
 
 
 @app.route('/get/nodes', methods=['GET'])
@@ -121,7 +122,7 @@ def delete_images_of_node():
     data = request.json
     node_name = data['node_name']
     image = data['image']
-    data = {"image", image}
+    data = {"image": image}
     json_data = json.dumps(data)
     response = send_post_request(f'http://{node_name}-image-service:8080/deleteImages', json_data)
     if response.status_code == HTTPStatus.OK:
@@ -135,7 +136,7 @@ def pull_images_of_node():
     data = request.json
     node_name = data['node_name']
     image = data['image']
-    data = {"image", image}
+    data = {"image": image}
     json_data = json.dumps(data)
     response = send_post_request(f'http://{node_name}-image-service:8080/pullImages', json_data)
     if response.status_code == HTTPStatus.OK:
