@@ -8,7 +8,7 @@ It also provides endpoints to get a list of nodes and to check and create deploy
 ## Installation and Running
 1. Clone the repository:
 ```shell
-git clone https://github.com/your_username/your_microservice.git
+git clone https://github.com/HIT-ICES/ImageService.git
 ```
 2. Navigate to the project directory:
 ```shell
